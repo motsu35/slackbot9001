@@ -4,6 +4,11 @@ from slackbot.bot import listen_to
 import random
 import re
 import sys
+import json
+import urllib2
+import cStringIO
+from PIL import Image
+
 
 def main():
     markov_file = open(sys.argv[1])
@@ -14,15 +19,19 @@ def main():
 
 @listen_to('\\btom\\b', re.IGNORECASE)
 def tom(message):
-    global markov_obj
-    #message.reply(filter(lambda x: x in string.printable, markov_obj.generate_markov_text()))
-    message.reply(markov_obj.generate_markov_text())
-    message.react('thetom')
+    chance = (random.randint(1,100))
+    if chance <= 25:
+        global markov_obj
+        #message.reply(filter(lambda x: x in string.printable, markov_obj.generate_markov_text()))
+        message.reply(markov_obj.generate_markov_text())
+        message.react('thetom')
 
 @listen_to('\\bfoundation\\b', re.IGNORECASE)
 def foundation(message):
-    global markov_obj
-    message.reply(markov_obj.generate_markov_text())
+    chance = (random.randint(1,100))
+    if chance <= 25:
+        global markov_obj
+        message.reply(markov_obj.generate_markov_text())
 #    message.react('thetom')
 
 @respond_to('I love you')
@@ -33,6 +42,86 @@ def love(message):
 def money(message):
     message.reply('YES! i love da money! $$$$ :moneybag:')
 
+#animated
+@listen_to('^\.gif\s', re.IGNORECASE)
+def gis(message):
+    message.reply(GetGifShit(message))
+
+@respond_to('^\.gif\s', re.IGNORECASE)
+def gis(message):
+    message.reply(GetGifShit(message))
+
+
+#non animated
+@listen_to('^\.gis\s', re.IGNORECASE)
+def gis(message):
+    message.reply(GetImageShit(message))
+
+@respond_to('^\.gis\s', re.IGNORECASE)
+def gis(message):
+    message.reply(GetImageShit(message))
+
+
+def countFrames(gif):
+    try:
+        file = cStringIO.StringIO(urllib2.urlopen(gif).read())
+    except:
+        return -1
+
+    img = Image.open(file)
+    frames = 0
+    while img:
+        frames += 1
+        try:
+            img.seek(frames)
+        except EOFError:
+            break
+    return frames
+
+#the things that do the things:
+def GetGifShit(searchTerm):
+    num_results = None
+    result_urls = []
+    
+    searchTerm = searchTerm.body["text"]
+    searchTerm = searchTerm[4:].strip().replace(" ","%20")
+    response = urllib2.urlopen('https://www.googleapis.com/customsearch/v1?key=aaaaaaaaaaaaaaaaaaaaaaaaa&cx=bbbbbbbbbbbbbbbbb&q='+searchTerm+'&searchType=image&imgtype=animated&fileType=gif&safe=medium&alt=json&num=7')
+    data = json.load(response)
+    
+    #make sure we have an image to start with.
+    if int(data["queries"]["request"][0]["totalResults"]) != 0:
+        num_results = data["queries"]["request"][0]["count"]
+        for x in range(0,min(num_results, data["queries"]["request"][0]["totalResults"])):
+            result_urls.append(data["items"][x]["link"])
+        #randomize the list.
+        random.shuffle(result_urls)
+        for img in result_urls:
+            if countFrames(img) > 2:
+                return img
+
+        return "your search sucks..."
+    else:
+        return "your search sucks..."
+
+
+def GetImageShit(searchTerm):
+    num_results = None
+    result_urls = []
+    
+    searchTerm = searchTerm.body["text"]
+    searchTerm = searchTerm[4:].strip().replace(" ","%20")
+    response = urllib2.urlopen('https://www.googleapis.com/customsearch/v1?key=aaaaaaaaaaaaaaaaaaaaaaaa&cx=bbbbbbbbbbbbbbbbbbbbb&q='+searchTerm+'&searchType=image&safe=medium&alt=json&num=7')
+    data = json.load(response)
+    
+    #make sure we have an image to start with.
+    if int(data["queries"]["request"][0]["totalResults"]) != 0:
+        num_results = data["queries"]["request"][0]["count"]
+        for x in range(0,min(num_results, data["queries"]["request"][0]["totalResults"])):
+            result_urls.append(data["items"][x]["link"])
+        #randomize the list.
+        return random.choice(result_urls)
+    else:
+        return "your search sucks..."
 
 #markov shit
 class Markov(object):
